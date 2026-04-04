@@ -102,7 +102,7 @@ void ReadSheet(std::ifstream &ArcadeScoreFile, std::string scoresFilePath) {
     song songs[kMaxNumSongs];
 
     ArcadeScoreFile >> readChar;
-    while(ArcadeScoreFile) {
+    while(ArcadeScoreFile && songIndex<=kMaxNumSongs) {
             for (int i=1; i<25; i++) { //magic number because guh
                 ArcadeScoreFile >> readChar;
             }
@@ -187,6 +187,10 @@ void ReadSheet(std::ifstream &ArcadeScoreFile, std::string scoresFilePath) {
                 ArcadeScoreFile >> readChar; //throw the :
                 ArcadeScoreFile >> readChar; //and the : before the next song
                 songIndex+=1;
+                if (songIndex >= kMaxNumSongs) {
+                    std::println("Max number of songs reached, please increase maxSongs!");
+                    std::exit(1);
+                }
             }
     }
     ArcadeScoreFile.close();
@@ -202,6 +206,7 @@ void discardUntilNum(std::ifstream &ArcadeScoreFile) {
 }
 
 bool songSort(song const &one, song const &two) {
+    //TODO: read config for sorting type
     if (one.accuracy != two.accuracy) {
         return one.accuracy > two.accuracy;
     }
@@ -212,32 +217,30 @@ bool songSort(song const &one, song const &two) {
 }
 
 void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
-
-    //sort
     std::sort(songs, songs+songIndex, &songSort);
 
-
-    //TODO will NOT work on windows! ... currently prints a small error at the top of the screen on linux
+    #if defined(__linux__)
     system("clear");
+    #elif defined(_WIN32)
     system("cls");
-
+    #endif
     std::println(" |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level |Cleared");
     std::println(" |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|-------");
 
     for (int i=0; i<songIndex; i++) {
         // TODO: add actual custom conditions
-        // if (songs[i].cleared == false) {
-        //     continue;
-        // }
-        // if (!(songs[i].difficultyName == "UNBEATABLE" || songs[i].difficultyName == "Star")) {
-        //     continue;
-        // }
-        // if (songs[i].modName == "DoubleTime" || songs[i].modName == "HalfTime") {
-        //     continue;
-        // }
-        // if (songs[i].level == 0) {
-        //     continue;
-        // }
+        if (songs[i].cleared == false) {
+            continue;
+        }
+        if (!(songs[i].difficultyName == "UNBEATABLE" || songs[i].difficultyName == "Star")) {
+            continue;
+        }
+        if (songs[i].modName == "DoubleTime" || songs[i].modName == "HalfTime") {
+            continue;
+        }
+        if (songs[i].level == 0) {
+            continue;
+        }
 
         ColorName(i,songs);
         std::print("{:^33}",songs[i].songName.substr(0, 33));
@@ -285,12 +288,12 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
         ColorText(songs[i].cleared,i,songs);
         std::print("uncleared",songs[i].cleared);
         } else {
-            std::print("\033[0m |");
+            std::print(" \033[0m|");
         }
         std::println("\033[0m");
     }
 
-    // TODO: remove debug
+    // color debug
     // std::println("DEBUG");
     // for (int i=0; i<108; i++) {
     //     std::println("\033[{}mi:{}",i,i);
@@ -306,7 +309,7 @@ void ResetColorAndPrintLines() {
 
 bool OverarchingHighlighting(int i, song songs[kMaxNumSongs]) {
     if (songs[i].cleared == false) {
-        std::print("\033[31m\033[5m ");
+        std::print("\033[31m ");
         return true;
     }
     if(songs[i].Perf + songs[i].Great + songs[i].Good + songs[i].Ok + songs[i].Barely + songs[i].Miss == 0) {
@@ -323,7 +326,7 @@ bool OverarchingHighlighting(int i, song songs[kMaxNumSongs]) {
 void ColorName(int i, song songs[kMaxNumSongs]) {
     ResetColorAndPrintLines();
     if (songs[i].cleared == false) {
-        std::print("\033[31m\033[5m ");
+        std::print("\033[31m ");
         return;
     }
     std::print("\033[105m ");
@@ -332,7 +335,7 @@ void ColorName(int i, song songs[kMaxNumSongs]) {
 void ColorText(std::string str, int i, song songs[kMaxNumSongs]) {
     ResetColorAndPrintLines();
     if (songs[i].cleared == false) {
-        std::print("\033[31m\033[5m ");
+        std::print("\033[31m ");
         return;
     }
     if (str == "UNBEATABLE") {
@@ -395,7 +398,7 @@ void ColorCrit(int num, int i, song songs[kMaxNumSongs]) {
         return;
     }
     if (songs[i].cleared == false) {
-        std::print("\033[31m\033[5m ");
+        std::print("\033[31m ");
         return;
     }
     if (num == 0) {
@@ -411,7 +414,7 @@ void ColorCrit(int num, int i, song songs[kMaxNumSongs]) {
 void ColorText(double num, int i, song songs[kMaxNumSongs]) {
     ResetColorAndPrintLines();
     if (songs[i].cleared == false) {
-        std::print("\033[31m\033[5m ");
+        std::print("\033[31m ");
         return;
     }
     if (num == 1.0) {
