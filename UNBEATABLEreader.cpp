@@ -26,6 +26,7 @@ struct song {
     int Miss{};
     int level{};
     bool cleared{};
+    //TODO: include rating
 };
 
 const int kMaxNumSongs = 1000;
@@ -47,6 +48,7 @@ bool songSort(song const &one, song const &two);
 int main() {
 
     //go read config.txt; return a found filepath
+    //TODO: replace with proper confing reading function
     std::string scoresFilePath = getFilepath();
 
     //read in the arcade highscores file found in config.txt
