@@ -1,5 +1,7 @@
 # UNBEATABLE_Rating_Reader
 
+note: sorry for the bad code lol
+
 ## Usage:
 
 Windows: Get all the assosiated DLLs
