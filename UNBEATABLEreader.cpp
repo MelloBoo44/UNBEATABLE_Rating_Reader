@@ -1,4 +1,5 @@
 //notes for me lmao
+//TODO: replace songnames with the one from the very cool and epic json
 
 #include <iostream>
 #include <print>
@@ -9,6 +10,7 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <cmath>
 
 struct song {
     std::string songName{};
@@ -26,7 +28,7 @@ struct song {
     int Miss{};
     int level{};
     bool cleared{};
-    //TODO: include rating
+    double rating{};
 };
 
 const int kMaxNumSongs = 1000;
@@ -41,6 +43,7 @@ void ColorName(int i, song songs[kMaxNumSongs]);
 void ColorText(int, int i, song songs[kMaxNumSongs]);
 void ColorCrit(int, int i, song songs[kMaxNumSongs]);
 void ColorText(double, int i, song songs[kMaxNumSongs]);
+void ColorRating(int i, song songs[kMaxNumSongs]);
 bool OverarchingHighlighting(int i, song songs[kMaxNumSongs]);
 void ResetColorAndPrintLines(song one, song two);
 bool songSort(song const &one, song const &two);
@@ -188,6 +191,26 @@ void ReadSheet(std::ifstream &ArcadeScoreFile, std::string scoresFilePath) {
                 }
                 ArcadeScoreFile >> readChar; //throw the :
                 ArcadeScoreFile >> readChar; //and the : before the next song
+
+                int BONUS{};
+                if (songs[songIndex].accuracy >= 0.90) {
+                    BONUS = 25;
+                } else if (songs[songIndex].accuracy >= 0.85) {
+                    BONUS = 20;
+                } else if (songs[songIndex].accuracy >= 0.80) {
+                    BONUS = 15;
+                } else if (songs[songIndex].accuracy >= 0.70) {
+                    BONUS = 12;
+                } else if (songs[songIndex].accuracy >= 0.50) {
+                    BONUS = 10;
+                } else {
+                    BONUS = 0;
+                }
+                songs[songIndex].rating = (static_cast<double>(songs[songIndex].level)*((std::pow(((songs[songIndex].accuracy*100.0) - 50.0),1.12))+static_cast<double>(BONUS)))/5625.0;
+                if(BONUS==0) {
+                    songs[songIndex].rating = 0.0;
+                }
+
                 songIndex+=1;
                 if (songIndex >= kMaxNumSongs) {
                     std::println("Max number of songs reached, please increase maxSongs!");
@@ -209,13 +232,10 @@ void discardUntilNum(std::ifstream &ArcadeScoreFile) {
 
 bool songSort(song const &one, song const &two) {
     //TODO: read config for sorting type
-    if (one.accuracy != two.accuracy) {
-        return one.accuracy > two.accuracy;
+    if (one.rating != two.rating) {
+        return one.rating > two.rating;
     }
-    if (one.level != two.level) {
-        return one.level > two.level;
-    }
-    return one.accuracy > two.accuracy;
+    return one.rating > two.rating;
 }
 
 void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
@@ -226,23 +246,23 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
     #elif defined(_WIN32)
     system("cls");
     #endif
-    std::println(" |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level |Cleared");
-    std::println(" |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|-------");
+    std::println(" |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level | Rating |Cleared");
+    std::println(" |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|--------|-------");
 
     for (int i=0; i<songIndex; i++) {
         // TODO: add actual custom conditions
-        if (songs[i].cleared == false) {
-            continue;
-        }
-        if (!(songs[i].difficultyName == "UNBEATABLE" || songs[i].difficultyName == "Star")) {
-            continue;
-        }
-        if (songs[i].modName == "DoubleTime" || songs[i].modName == "HalfTime") {
-            continue;
-        }
-        if (songs[i].level == 0) {
-            continue;
-        }
+        // if (songs[i].cleared == false) {
+        //     continue;
+        // }
+        // if (!(songs[i].difficultyName == "UNBEATABLE" || songs[i].difficultyName == "Star")) {
+        //     continue;
+        // }
+        // if (songs[i].modName == "DoubleTime" || songs[i].modName == "HalfTime") {
+        //     continue;
+        // }
+        // if (songs[i].level == 0) {
+        //     continue;
+        // }
 
         ColorName(i,songs);
         std::print("{:^33}",songs[i].songName.substr(0, 33));
@@ -285,6 +305,9 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
 
         ColorText(songs[i].level,i,songs);
         std::print("{:^4}",songs[i].level);
+
+        ColorRating(i,songs);
+        std::print("{:^.4f}",songs[i].rating);
 
         if(songs[i].cleared == false) {
         ColorText(songs[i].cleared,i,songs);
@@ -433,6 +456,36 @@ void ColorText(double num, int i, song songs[kMaxNumSongs]) {
     }
     if (num >= 0.75) {
         std::print("\033[94m ");
+        return;
+    }
+    std::print("\033[90m ");
+    return;
+}
+
+void ColorRating(int i, song songs[kMaxNumSongs]) {
+    ResetColorAndPrintLines();
+    if (songs[i].cleared == false) {
+        std::print("\033[31m ");
+        return;
+    }
+    if (i<5) {
+        std::print("\033[46m ");
+        return;
+    }
+    if (i<10) {
+        std::print("\033[45m ");
+        return;
+    }
+    if (i<15) {
+        std::print("\033[46m ");
+        return;
+    }
+    if (i<20) {
+        std::print("\033[45m ");
+        return;
+    }
+    if (i<25) {
+        std::print("\033[46m ");
         return;
     }
     std::print("\033[90m ");
