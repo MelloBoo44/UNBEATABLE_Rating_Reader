@@ -1,5 +1,9 @@
 # UNBEATABLE_Rating_Reader
 
+Can read an UNBEATABLE arcade-highscores.json file and print it; it automatically updates upon new data hitting the file.
+
+note: sorry for the bad code lol
+
 ## Usage:
 
 Windows: Get all the assosiated DLLs
