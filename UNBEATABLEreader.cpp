@@ -31,19 +31,35 @@ struct song {
     double rating{};
 };
 
+struct config {
+    std::string filename{};
+    bool showUncleared{};
+    bool showTop25Uncleared{};
+    bool showDoubletime{};
+    bool showHalfTime{};
+    bool showLevelZero{};
+
+    bool showStar{};
+    bool showUnbeatable{};
+    bool showOtherDiff{};
+    std::string sort[5]{};
+};
+
 const int kMaxNumSongs = 1000;
 
 //function defs
-std::string getFilepath();
-void ReadSheet(std::ifstream &ArcadeScoreFile, std::string scoresFilePath);
-void discardUntilNum(std::ifstream &ArcadeScoreFile);
+//std::string getFilepath();
+void doConfigStuff(config &settings);
+void discardUntilHashtag(std::ifstream &configfile);
+void ReadSheet(std::ifstream &ArcadeScoreFile, config settings);
+void discardUntilNum(std::ifstream &);
 void PrintSheet(int songIndex, song songs[kMaxNumSongs]);
 void ColorText(std::string, int i, song songs[kMaxNumSongs]);
 void ColorName(int i, song songs[kMaxNumSongs]);
 void ColorText(int, int i, song songs[kMaxNumSongs]);
 void ColorCrit(int, int i, song songs[kMaxNumSongs]);
 void ColorText(double, int i, song songs[kMaxNumSongs]);
-void ColorRating(int i, song songs[kMaxNumSongs]);
+void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy);
 bool OverarchingHighlighting(int i, song songs[kMaxNumSongs]);
 void ResetColorAndPrintLines(song one, song two);
 bool songSort(song const &one, song const &two);
@@ -52,50 +68,72 @@ int main() {
 
     //go read config.txt; return a found filepath
     //TODO: replace with proper confing reading function
-    std::string scoresFilePath = getFilepath();
+    config settings{};
+    doConfigStuff(settings);
 
     //read in the arcade highscores file found in config.txt
     std::ifstream ArcadeScoreFile;
-    ReadSheet(ArcadeScoreFile, scoresFilePath);
+    ReadSheet(ArcadeScoreFile, settings);
 
     // i tried to convert these to seconds since epoch time but i suck :p; i am going to DIRECTLY COMPARE whatever these are and NOONE can stop me
-    auto timeLastModified = std::filesystem::last_write_time(scoresFilePath);
-    auto timeLastModifiedChecking = std::filesystem::last_write_time(scoresFilePath);
+    auto timeLastModified = std::filesystem::last_write_time(settings.filename);
+    auto timeLastModifiedChecking = std::filesystem::last_write_time(settings.filename);
     while(true) {
         //stuff to check if the file changed
-        timeLastModifiedChecking = std::filesystem::last_write_time(scoresFilePath);
+        timeLastModifiedChecking = std::filesystem::last_write_time(settings.filename);
         if( !(timeLastModified==timeLastModifiedChecking) ) {
             timeLastModified=timeLastModifiedChecking;
             std::this_thread::sleep_for(std::chrono::milliseconds(200)); // i put this here because uhh iuhmm yeah?
             //we can actually get to work now!
-            ReadSheet(ArcadeScoreFile, scoresFilePath);
+            ReadSheet(ArcadeScoreFile, settings);
 
         }
-        // TODO: new thread?
-        // std::string command{};
-        // std::getline(std::cin, command);
-        // std::println("cmd:{}",command);
     }
 
     return 0;
 
 }
 
-std::string getFilepath() {
+void doConfigStuff(config &settings) {
     std::ifstream configfile;
     configfile.open("config.txt");
     if(!configfile) {
         std::println("config.txt not found. Please create it and put the filepath to arcade-highscores.json inside.");
         std::exit(1);
     }
-    std::string path{};
-    std::getline(configfile,path);
+    discardUntilHashtag(configfile);
+    configfile.ignore(10);
+    std::getline(configfile,settings.filename);
+    discardUntilNum(configfile);
+    configfile >> settings.showUncleared;
+    discardUntilNum(configfile);
+    configfile.ignore(2); // ignore the 25 in "TOP25UNCLEARED"
+    discardUntilNum(configfile);
+    configfile >> settings.showTop25Uncleared;
+    discardUntilNum(configfile);
+    configfile >> settings.showDoubletime;
+    discardUntilNum(configfile);
+    configfile >> settings.showHalfTime;
+    discardUntilNum(configfile);
+    configfile >> settings.showLevelZero;
+    discardUntilNum(configfile);
+    configfile >> settings.showStar;
+    discardUntilNum(configfile);
+    configfile >> settings.showUnbeatable;
+    discardUntilNum(configfile);
+    configfile >> settings.showOtherDiff;
+
+
+
+
+    //std::exit(2);
+
+
     configfile.close();
-    return path;
 }
 
-void ReadSheet(std::ifstream &ArcadeScoreFile, std::string scoresFilePath) {
-    ArcadeScoreFile.open(scoresFilePath);
+void ReadSheet(std::ifstream &ArcadeScoreFile, config settings) {
+    ArcadeScoreFile.open(settings.filename);
     if(!ArcadeScoreFile) {
         std::println("arcade-highscores.json not found; did you put the correct filepath in config.txt?");
         std::exit(1);
@@ -223,10 +261,17 @@ void ReadSheet(std::ifstream &ArcadeScoreFile, std::string scoresFilePath) {
     return;
 }
 
-void discardUntilNum(std::ifstream &ArcadeScoreFile) {
+void discardUntilNum(std::ifstream &file) {
     char readChar{};
-    while(ArcadeScoreFile && !(isdigit(ArcadeScoreFile.peek()))) { //discard until number
-        ArcadeScoreFile >> readChar;
+    while(file && !(isdigit(file.peek()))) { //discard until number
+        file >> readChar;
+    }
+}
+
+void discardUntilHashtag(std::ifstream &configfile) {
+    char readChar{};
+    while(configfile && !(readChar=='#')) { //discard until #
+        configfile >> readChar;
     }
 }
 
@@ -249,8 +294,11 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
     std::println(" |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level | Rating |Cleared");
     std::println(" |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|--------|-------");
 
+    int ratingSkipBy{};
     for (int i=0; i<songIndex; i++) {
         // TODO: add actual custom conditions
+        // TODO: implement skipping customs
+
         // if (songs[i].cleared == false) {
         //     continue;
         // }
@@ -306,7 +354,7 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
         ColorText(songs[i].level,i,songs);
         std::print("{:^4}",songs[i].level);
 
-        ColorRating(i,songs);
+        ColorRating(i,songs, ratingSkipBy);
         std::print("{:^.4f}",songs[i].rating);
 
         if(songs[i].cleared == false) {
@@ -462,29 +510,34 @@ void ColorText(double num, int i, song songs[kMaxNumSongs]) {
     return;
 }
 
-void ColorRating(int i, song songs[kMaxNumSongs]) {
+void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy) {
     ResetColorAndPrintLines();
     if (songs[i].cleared == false) {
         std::print("\033[31m ");
         return;
     }
-    if (i<5) {
+    if (songs[i].modName == "HalfTime") {
+        std::print("\033[90m ");
+        ratingSkipBy+=1;
+        return;
+    }
+    if (i-ratingSkipBy<5) {
         std::print("\033[46m ");
         return;
     }
-    if (i<10) {
+    if (i-ratingSkipBy<10) {
         std::print("\033[45m ");
         return;
     }
-    if (i<15) {
+    if (i-ratingSkipBy<15) {
         std::print("\033[46m ");
         return;
     }
-    if (i<20) {
+    if (i-ratingSkipBy<20) {
         std::print("\033[45m ");
         return;
     }
-    if (i<25) {
+    if (i-ratingSkipBy<25) {
         std::print("\033[46m ");
         return;
     }
