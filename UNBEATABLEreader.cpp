@@ -47,8 +47,6 @@ struct config {
 
 const int kMaxNumSongs = 1000;
 
-//function defs
-//std::string getFilepath();
 void doConfigStuff(config &settings);
 void discardUntilHashtag(std::ifstream &configfile);
 void ReadSheet(std::ifstream &ArcadeScoreFile, config settings, bool &top25donedisplaying);
@@ -103,34 +101,23 @@ void doConfigStuff(config &settings) {
     discardUntilHashtag(configfile);
     configfile.ignore(10);
     std::getline(configfile,settings.filename);
-    discardUntilNum(configfile);
-    configfile >> settings.showUncleared;
-    discardUntilNum(configfile);
-    configfile.ignore(2); // ignore the 25 in "TOP25UNCLEARED"
-    discardUntilNum(configfile);
-    configfile >> settings.showTop25Uncleared;
-    discardUntilNum(configfile);
-    configfile >> settings.showDoubletime;
-    discardUntilNum(configfile);
-    configfile >> settings.showHalfTime;
-    discardUntilNum(configfile);
-    configfile >> settings.showCustom;
-    discardUntilNum(configfile);
-    configfile >> settings.showStar;
-    discardUntilNum(configfile);
-    configfile >> settings.showUnbeatable;
-    discardUntilNum(configfile);
-    configfile >> settings.showOtherDiff;
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showUncleared;
 
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile.ignore(2); // ignore the 25 in "TOP25UNCLEARED"
+    discardUntilNum(configfile); configfile >> settings.showTop25Uncleared;
 
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showDoubletime;
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showHalfTime;
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showCustom;
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showStar;
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showUnbeatable;
+    discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showOtherDiff;
 
-
-    //std::exit(2);
-
+    //TODO: grab sorting settings
 
     configfile.close();
 }
-
+//TODO: COlor top 25 properly.
 void ReadSheet(std::ifstream &ArcadeScoreFile, config settings, bool &top25donedisplaying) {
     ArcadeScoreFile.open(settings.filename);
     if(!ArcadeScoreFile) {
@@ -293,7 +280,7 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs], config settings, bool &
     #elif defined(_WIN32)
     system("cls");
     #endif
-    std::println(" PLEASE NOTE: The top 25 rating thing is not implemented well at all and just sucks; sooo,, yeah! im lazy rn. only reguard it if you think you set the config correctly\n\n");
+    std::println(" PLEASE NOTE: The 'top 25 rating thing' actually just applies colors to the first 25 ratings, reguardless of sorting.\n\n");
     std::println(" |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level | Rating |Cleared");
     std::println(" |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|--------|-------");
 

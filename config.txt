@@ -1,0 +1,31 @@
+To find your arcade-highscores.json on Windows:
+Your filepath might be something like C:/users/steamuser/AppData/LocalLow/D-CELL GAMES/UNBEATABLE/PROFILES/{some ID}/arcade-highscores.json
+but don't quote me on that
+additional note for windows: do not include quotes around the filepath, i think
+
+# FILEPATH:/home/nya/.local/share/Steam/steamapps/compatdata/2240620/pfx/drive_c/users/steamuser/AppData/LocalLow/D-CELL GAMES/UNBEATABLE/PROFILES/D6722F90-172D-496C-93B0-9A8F0580E401/arcade-highscores.json
+
+Show the following:
+# UNCLEARED=1
+# TOP25UNCLEARED=1
+# DOUBLETIME=1
+# HALFTIME=0
+
+This discards track names that start with CUSTOM_ or are level 0.
+Does NOT filter all custom levels yet!! why can some of them be not prefixed with 'CUSTOM_' .. :(
+# CUSTOM=1
+
+Show the following difficulties:
+# STAR=1
+# UNBEATABLE=1
+# OTHER=0
+
+
+
+
+
+
+not done! will do nothing!
+---------------------------------------------
+Sort by the following, in the order specified: (seperateMods, rating, level, accuracy, misses)
+# SORT=[level, misses]
