@@ -37,7 +37,7 @@ struct config {
     bool showTop25Uncleared{};
     bool showDoubletime{};
     bool showHalfTime{};
-    bool showLevelZero{};
+    bool showCustom{};
 
     bool showStar{};
     bool showUnbeatable{};
@@ -51,29 +51,28 @@ const int kMaxNumSongs = 1000;
 //std::string getFilepath();
 void doConfigStuff(config &settings);
 void discardUntilHashtag(std::ifstream &configfile);
-void ReadSheet(std::ifstream &ArcadeScoreFile, config settings);
+void ReadSheet(std::ifstream &ArcadeScoreFile, config settings, bool &top25donedisplaying);
 void discardUntilNum(std::ifstream &);
-void PrintSheet(int songIndex, song songs[kMaxNumSongs]);
+void PrintSheet(int songIndex, song songs[kMaxNumSongs], config settings, bool &top25donedisplaying);
 void ColorText(std::string, int i, song songs[kMaxNumSongs]);
 void ColorName(int i, song songs[kMaxNumSongs]);
 void ColorText(int, int i, song songs[kMaxNumSongs]);
 void ColorCrit(int, int i, song songs[kMaxNumSongs]);
 void ColorText(double, int i, song songs[kMaxNumSongs]);
-void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy);
+void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy, bool &top25donedisplaying);
 bool OverarchingHighlighting(int i, song songs[kMaxNumSongs]);
 void ResetColorAndPrintLines(song one, song two);
 bool songSort(song const &one, song const &two);
 
 int main() {
 
-    //go read config.txt; return a found filepath
-    //TODO: replace with proper confing reading function
     config settings{};
     doConfigStuff(settings);
 
     //read in the arcade highscores file found in config.txt
     std::ifstream ArcadeScoreFile;
-    ReadSheet(ArcadeScoreFile, settings);
+    bool top25donedisplaying = false;
+    ReadSheet(ArcadeScoreFile, settings, top25donedisplaying);
 
     // i tried to convert these to seconds since epoch time but i suck :p; i am going to DIRECTLY COMPARE whatever these are and NOONE can stop me
     auto timeLastModified = std::filesystem::last_write_time(settings.filename);
@@ -85,7 +84,7 @@ int main() {
             timeLastModified=timeLastModifiedChecking;
             std::this_thread::sleep_for(std::chrono::milliseconds(200)); // i put this here because uhh iuhmm yeah?
             //we can actually get to work now!
-            ReadSheet(ArcadeScoreFile, settings);
+            ReadSheet(ArcadeScoreFile, settings, top25donedisplaying);
 
         }
     }
@@ -115,7 +114,7 @@ void doConfigStuff(config &settings) {
     discardUntilNum(configfile);
     configfile >> settings.showHalfTime;
     discardUntilNum(configfile);
-    configfile >> settings.showLevelZero;
+    configfile >> settings.showCustom;
     discardUntilNum(configfile);
     configfile >> settings.showStar;
     discardUntilNum(configfile);
@@ -132,7 +131,7 @@ void doConfigStuff(config &settings) {
     configfile.close();
 }
 
-void ReadSheet(std::ifstream &ArcadeScoreFile, config settings) {
+void ReadSheet(std::ifstream &ArcadeScoreFile, config settings, bool &top25donedisplaying) {
     ArcadeScoreFile.open(settings.filename);
     if(!ArcadeScoreFile) {
         std::println("arcade-highscores.json not found; did you put the correct filepath in config.txt?");
@@ -245,7 +244,7 @@ void ReadSheet(std::ifstream &ArcadeScoreFile, config settings) {
                     BONUS = 0;
                 }
                 songs[songIndex].rating = (static_cast<double>(songs[songIndex].level)*((std::pow(((songs[songIndex].accuracy*100.0) - 50.0),1.12))+static_cast<double>(BONUS)))/5625.0;
-                if(BONUS==0) {
+                if(BONUS==0 || songs[songIndex].modName == "HalfTime") {
                     songs[songIndex].rating = 0.0;
                 }
 
@@ -257,7 +256,7 @@ void ReadSheet(std::ifstream &ArcadeScoreFile, config settings) {
             }
     }
     ArcadeScoreFile.close();
-    PrintSheet(songIndex, songs);
+    PrintSheet(songIndex, songs, settings, top25donedisplaying);
     return;
 }
 
@@ -280,10 +279,13 @@ bool songSort(song const &one, song const &two) {
     if (one.rating != two.rating) {
         return one.rating > two.rating;
     }
-    return one.rating > two.rating;
+    if (one.accuracy != two.accuracy) {
+        return one.accuracy > two.accuracy;
+    }
+    return one.accuracy > two.accuracy;
 }
 
-void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
+void PrintSheet(int songIndex, song songs[kMaxNumSongs], config settings, bool &top25donedisplaying) {
     std::sort(songs, songs+songIndex, &songSort);
 
     #if defined(__linux__)
@@ -291,6 +293,7 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
     #elif defined(_WIN32)
     system("cls");
     #endif
+    std::println(" PLEASE NOTE: The top 25 rating thing is not implemented well at all and just sucks; sooo,, yeah! im lazy rn. only reguard it if you think you set the config correctly\n\n");
     std::println(" |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level | Rating |Cleared");
     std::println(" |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|--------|-------");
 
@@ -298,19 +301,33 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
     for (int i=0; i<songIndex; i++) {
         // TODO: add actual custom conditions
         // TODO: implement skipping customs
-
-        // if (songs[i].cleared == false) {
-        //     continue;
-        // }
-        // if (!(songs[i].difficultyName == "UNBEATABLE" || songs[i].difficultyName == "Star")) {
-        //     continue;
-        // }
+        if ((songs[i].cleared == false) && top25donedisplaying && (settings.showTop25Uncleared==1) ) {
+            continue;
+        }
+        if (songs[i].cleared == false && !(settings.showUncleared==1)) {
+            continue;
+        }
+        if ((!(songs[i].difficultyName == "UNBEATABLE" || songs[i].difficultyName == "Star")) && !settings.showOtherDiff) {
+            continue;
+        }
+        if (songs[i].difficultyName == "UNBEATABLE" && !settings.showUnbeatable) {
+            continue;
+        }
+        if (songs[i].difficultyName == "Star" && !settings.showStar) {
+            continue;
+        }
         // if (songs[i].modName == "DoubleTime" || songs[i].modName == "HalfTime") {
         //     continue;
         // }
-        // if (songs[i].level == 0) {
-        //     continue;
-        // }
+        if (songs[i].modName == "HalfTime" && !settings.showHalfTime) {
+            continue;
+        }
+        if (songs[i].modName == "DoubleTime" && !settings.showDoubletime) {
+            continue;
+        }
+        if ((songs[i].level == 0|| songs[i].songName.substr(0, 7) == "CUSTOM_" || songs[i].songName.substr(0, 10) == "__WSCUSTOM") && settings.showCustom){ //TODO: Can be verified by matching to official json
+            continue;
+        }
 
         ColorName(i,songs);
         std::print("{:^33}",songs[i].songName.substr(0, 33));
@@ -354,7 +371,7 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs]) {
         ColorText(songs[i].level,i,songs);
         std::print("{:^4}",songs[i].level);
 
-        ColorRating(i,songs, ratingSkipBy);
+        ColorRating(i,songs,ratingSkipBy,top25donedisplaying);
         std::print("{:^.4f}",songs[i].rating);
 
         if(songs[i].cleared == false) {
@@ -510,11 +527,14 @@ void ColorText(double num, int i, song songs[kMaxNumSongs]) {
     return;
 }
 
-void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy) {
+void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy, bool &top25donedisplaying) {
     ResetColorAndPrintLines();
-    if (songs[i].cleared == false) {
+    if (songs[i].cleared == false && top25donedisplaying) {
         std::print("\033[31m ");
         return;
+    }
+    if (1+i-ratingSkipBy>=25) { //i love bad code its my favorite
+            top25donedisplaying = true;
     }
     if (songs[i].modName == "HalfTime") {
         std::print("\033[90m ");
@@ -541,6 +561,7 @@ void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy) {
         std::print("\033[46m ");
         return;
     }
+
     std::print("\033[90m ");
     return;
 }
