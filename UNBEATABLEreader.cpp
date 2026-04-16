@@ -42,7 +42,8 @@ struct config {
     bool showStar{};
     bool showUnbeatable{};
     bool showOtherDiff{};
-    std::string sort[5]{};
+    std::string sort[10]{};
+    int sortArraySize{0};
 };
 
 const int kMaxNumSongs = 1000;
@@ -59,12 +60,13 @@ void ColorCrit(int, int i, song songs[kMaxNumSongs]);
 void ColorText(double, int i, song songs[kMaxNumSongs]);
 void ColorRating(int i, song songs[kMaxNumSongs], int &ratingSkipBy, bool &top25donedisplaying);
 bool OverarchingHighlighting(int i, song songs[kMaxNumSongs]);
-void ResetColorAndPrintLines(song one, song two);
+void ResetColorAndPrintLines();
 bool songSort(song const &one, song const &two);
+
+config settings{};
 
 int main() {
 
-    config settings{};
     doConfigStuff(settings);
 
     //read in the arcade highscores file found in config.txt
@@ -113,11 +115,25 @@ void doConfigStuff(config &settings) {
     discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showUnbeatable;
     discardUntilHashtag(configfile); discardUntilNum(configfile); configfile >> settings.showOtherDiff;
 
-    //TODO: grab sorting settings
+    //im sorry
+    discardUntilHashtag(configfile);
+    configfile.ignore(7);
+    int i=0;
+    std::getline(configfile, settings.sort[i], ',');
+    while((configfile.peek()==' ')) {
+        i++;
+        configfile.ignore();
+        std::getline(configfile, settings.sort[i], ',');
+        if(configfile.peek()=='\n') {
+            break;
+        }
+    }
+    settings.sort[i] = settings.sort[i].substr(0,settings.sort[i].length()-2) + '\0'; //lmao
+    settings.sortArraySize = i;
 
     configfile.close();
 }
-//TODO: COlor top 25 properly.
+//TODO: Color top 25 properly.
 void ReadSheet(std::ifstream &ArcadeScoreFile, config settings, bool &top25donedisplaying) {
     ArcadeScoreFile.open(settings.filename);
     if(!ArcadeScoreFile) {
@@ -263,6 +279,10 @@ void discardUntilHashtag(std::ifstream &configfile) {
 
 bool songSort(song const &one, song const &two) {
     //TODO: read config for sorting type
+    // for (int i=0; i<settings.sortArraySize; i++) {
+    //     std::println("im sorting but not");
+    // }
+    // return one.score > two.score;
     if (one.rating != two.rating) {
         return one.rating > two.rating;
     }
@@ -281,8 +301,8 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs], config settings, bool &
     system("cls");
     #endif
     std::println(" PLEASE NOTE: The 'top 25 rating thing' actually just applies colors to the first 25 ratings, reguardless of sorting.\n\n");
-    std::println(" |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level | Rating |Cleared");
-    std::println(" |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|--------|-------");
+    std::println("     |             Song Name             | Difficulty |  Modifier  |  Score  |Accuracy|MaxCom| Crit | Perf |Great | Good |  Ok  |Barely| Miss |Level | Rating |Cleared");
+    std::println("     |-----------------------------------|------------|------------|---------|--------|------|------|------|------|------|------|------|------|------|--------|-------");
 
     int ratingSkipBy{};
     for (int i=0; i<songIndex; i++) {
@@ -315,6 +335,8 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs], config settings, bool &
         if ((songs[i].level == 0|| songs[i].songName.substr(0, 7) == "CUSTOM_" || songs[i].songName.substr(0, 10) == "__WSCUSTOM") && settings.showCustom){ //TODO: Can be verified by matching to official json
             continue;
         }
+
+        std::print("{:>4}",i+1);
 
         ColorName(i,songs);
         std::print("{:^33}",songs[i].songName.substr(0, 33));
@@ -358,7 +380,11 @@ void PrintSheet(int songIndex, song songs[kMaxNumSongs], config settings, bool &
         ColorText(songs[i].level,i,songs);
         std::print("{:^4}",songs[i].level);
 
-        ColorRating(i,songs,ratingSkipBy,top25donedisplaying);
+        //ColorRating(i,songs,ratingSkipBy,top25donedisplaying);
+        ratingSkipBy=ratingSkipBy;
+        ResetColorAndPrintLines();
+        std::print("\033[90m "); //TODO: do better..
+
         std::print("{:^.4f}",songs[i].rating);
 
         if(songs[i].cleared == false) {

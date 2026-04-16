@@ -9,16 +9,16 @@ Show the following:
 # UNCLEARED=1
 # TOP25UNCLEARED=1
 # DOUBLETIME=1
-# HALFTIME=0
+# HALFTIME=1
 
-This discards track names that start with CUSTOM_ or are level 0.
+This shows track names that start with CUSTOM_ or are level 0.
 Does NOT filter all custom levels yet!! why can some of them be not prefixed with 'CUSTOM_' .. :(
 # CUSTOM=1
 
 Show the following difficulties:
 # STAR=1
 # UNBEATABLE=1
-# OTHER=0
+# OTHER=1
 
 
 
@@ -28,4 +28,4 @@ Show the following difficulties:
 not done! will do nothing!
 ---------------------------------------------
 Sort by the following, in the order specified: (seperateMods, rating, level, accuracy, misses)
-# SORT=[level, misses]
+# SORT=[level, misses, seperateMods, rating]
